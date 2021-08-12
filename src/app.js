@@ -54,8 +54,8 @@ app.post(
 
 /************** /coins/ paths **************/
 // "/counts/:countId" Route
-app.get("/counts/:countId", (request, response, next) => {
-  const { countId } = request.params;
+app.get("/counts/:countId", (req, res, next) => {
+  const { countId } = req.params;
   const foundCount = counts[countId];
 
   return foundCount === undefined
@@ -63,7 +63,7 @@ app.get("/counts/:countId", (request, response, next) => {
         status: 404,
         message: `Count id "${countId}" not found!`,
       })
-    : response.json({ data: foundCount });
+    : res.json({ data: foundCount });
 });
 
 // "/counts" Route
@@ -72,15 +72,15 @@ app.get("/counts", (req, res) => {
 });
 
 // Default 404 Route
-app.use((request, response, next) => {
-  next(`Not found: ${request.originalUrl}`);
+app.use((req, res, next) => {
+  next(`Not found: ${req.originalUrl}`);
 });
 
 // Error handler
-app.use((error, request, response, next) => {
+app.use((error, req, res, next) => {
   console.error(error);
   const { status = 500, message = `Something went wrong!` } = error;
-  response.status(status).json({ error: message });
+  res.status(status).json({ error: message });
 });
 
 module.exports = app;
