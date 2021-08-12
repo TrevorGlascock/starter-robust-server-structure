@@ -8,23 +8,22 @@ const counts = require("./data/counts-data");
 /******************************** ROUTES ********************************/
 app.use(express.json());
 
-/************** /coins/ paths **************/
-// "/counts/:countId" Route
-app.get("/counts/:countId", (req, res, next) => {
-  const { countId } = req.params;
-  const foundCount = counts[countId];
-  return foundCount === undefined
-    ? next(`Count id "${countId}" not found!`)
-    : res.json({ data: foundCount });
-});
-
-// "/counts" Route
-app.get("/counts", (req, res) => {
-  res.json({ data: counts });
-});
-
 /************** /flips/ paths **************/
+//Keeps track of largest currently existing ID to prevent collisions
 let lastFlipId = flips.reduce((maxId, flip) => Math.max(maxId, flip.id), 0);
+
+// Validation Middleware
+function bodyHasResultProperty(req, res, next) {
+  const { data: { result } = {} } = req.body;
+  if (result) {
+    return next(); // Call `next()` without an error message if the result exists
+  }
+  return next({
+    status: 400,
+    message: "A 'result' property is required.",
+  });
+}
+
 // "/flips/:flipId" Route
 app.get("/flips/:flipId", (req, res, next) => {
   const { flipId } = req.params;
@@ -37,26 +36,51 @@ app.get("/flips/:flipId", (req, res, next) => {
 
 // "/flips" Route
 app.get("/flips", (req, res) => res.json({ data: flips }));
-app.post("/flips", (req, res, next) => {
-  const { data: { result } = {} } = req.body;
-  const newFlip = {
-    id: ++lastFlipId, // Increment last ID, then assign as the current ID
-    result,
-  };
-  flips.push(newFlip);
-  counts[result] = counts[result] + 1; // Increment the counts
-  res.json({ data: newFlip });
+
+app.post(
+  "/flips",
+  bodyHasResultProperty, // Add validation middleware function
+  (req, res) => {
+    // Route handler no longer has validation code.
+    const { data: { result } = {} } = req.body;
+    const newFlip = {
+      id: ++lastFlipId, // Increment last id then assign as the current ID
+      result: result,
+    };
+    flips.push(newFlip);
+    res.status(201).json({ data: newFlip });
+  }
+);
+
+/************** /coins/ paths **************/
+// "/counts/:countId" Route
+app.get("/counts/:countId", (req, res, next) => {
+  const { countId } = req.params;
+  const foundCount = counts[countId];
+
+  return foundCount === undefined
+    ? next({
+        status: 404,
+        message: `Count id "${countId}" not found!`,
+      })
+    : res.json({ data: foundCount });
+});
+
+// "/counts" Route
+app.get("/counts", (req, res) => {
+  res.json({ data: counts });
 });
 
 // Default 404 Route
-app.use((request, response, next) => {
-  next(`Not found: ${request.originalUrl}`);
+app.use((req, res, next) => {
+  next(`Not found: ${req.originalUrl}`);
 });
 
 // Error handler
-app.use((error, request, response, next) => {
+app.use((error, req, res, next) => {
   console.error(error);
-  response.send(error);
+  const { status = 500, message = `Something went wrong!` } = error;
+  res.status(status).json({ error: message });
 });
 
 module.exports = app;
