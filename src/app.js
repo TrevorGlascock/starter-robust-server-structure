@@ -37,6 +37,7 @@ app.get("/flips/:flipId", (req, res, next) => {
 
 // "/flips" Route
 app.get("/flips", (req, res) => res.json({ data: flips }));
+
 app.post("/flips", (req, res, next) => {
   const { data: { result } = {} } = req.body;
   const newFlip = {
